@@ -1,0 +1,92 @@
+#!/usr/bin/env python3
+
+import getpass
+import sys
+
+from lib import util
+
+
+c = util.connect()
+if c == None:
+    print('Authentication failed.')
+    sys.exit(1)
+
+while True:
+    username = input('\nUsername: ').lower()
+
+    if util.user_exists(c, username):
+        print('User \'%s\' already exists.' % username)
+    else:
+        break
+
+givenName = input('Given name: ')
+surname = input('Surname: ')
+
+
+while True:
+    memberString = input('Member [y/n]: ')
+    if memberString in ['y', 'n']:
+        member = memberString == 'y'
+        break
+
+
+userdn = 'uid=%s,ou=users,ou=%s,%s' % (username, ['external', 'internal'][member], util.BASE)
+
+homedir = '/home/%s' % username
+
+print()
+
+while True:
+    userpass = getpass.getpass('Password: ')
+    userpass2 = getpass.getpass('Confirm password: ')
+
+
+    if userpass == userpass2:
+        break
+
+    print('Password mismatch.\n')
+
+
+uid = 2000
+gid = 2000
+
+if member:
+    mail = '%s@chaotikum.org' % username
+else:
+    mail = input('\nMail address: ')
+
+
+while True:
+    if not c.search(search_base=util.BASE, search_filter='(&(objectClass=posixAccount)(uidNumber=%i))' % uid):
+        break
+
+    uid = uid+1
+
+
+attributes = {
+    'uid': username,
+    'cn': '%s %s' % (givenName, surname),
+    'givenName': givenName,
+    'sn': surname,
+    'loginShell': '/bin/bash',
+    'homeDirectory': homedir,
+    'uidNumber': '%i' % uid,
+    'gidNumber': '%i' % gid,
+    'mail': mail,
+    'shadowMin': '0',
+    'shadowMax': '99999',
+    'shadowWarning': '7',
+}
+
+if not c.add(userdn, ['top', 'person', 'organizationalPerson', 'inetOrgPerson', 'posixAccount', 'shadowAccount'], attributes=attributes):
+    print('Unable to add user.')
+    sys.exit(1)
+
+if not util.change_password(c, userdn, userpass):
+    print('Unable to set password.')
+    sys.exit(1)
+
+if member:
+    if not util.add_group(c, username, 'members'):
+        print('Unable to add \'members\' group.')
+        sys.exit(1)

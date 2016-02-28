@@ -1,0 +1,24 @@
+#!/usr/bin/env python3
+
+import sys
+
+from lib import util
+
+
+if len(sys.argv) != 3:
+    print('Usage: chaotikumAddGroup <user> <group>')
+    sys.exit(1)
+
+
+username = sys.argv[1]
+groupname = sys.argv[2]
+
+
+c = util.connect()
+if c == None:
+    print('Authentication failed.')
+    sys.exit(1)
+
+if not util.add_group(c, username, groupname):
+    print('Unable to add \'%s\' to \'%s\'.', (username, groupname))
+    sys.exit(1)

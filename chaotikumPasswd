@@ -1,0 +1,41 @@
+#!/usr/bin/env python3
+
+import getpass
+import sys
+
+from lib import util
+
+
+if len(sys.argv) != 2:
+    print('Usage: chaotikumPasswd <user>')
+    sys.exit(1)
+
+
+username = sys.argv[1]
+
+
+c = util.connect()
+if c == None:
+    print('Authentication failed.')
+    sys.exit(1)
+
+if not util.user_exists(c, username):
+    print('User \'%s\' already exists.' % username)
+    sys.exit(1)
+
+userdn = c.response[0]['dn']
+
+
+while True:
+    userpass = getpass.getpass('Password: ')
+    userpass2 = getpass.getpass('Confirm password: ')
+
+
+    if userpass == userpass2:
+        break
+
+    print('Password mismatch.\n')
+
+if not util.change_password(c, userdn, userpass):
+    print('Unable to set password.')
+    sys.exit(1)
